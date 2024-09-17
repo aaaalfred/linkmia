@@ -41,57 +41,14 @@ class GoogleVisionService {
       print('Texto completo extraído:');
       print(fullText);
 
-      final datos = {
-        "Apellido Paterno": "",
-        "Apellido Materno": "",
-        "Nombre": "",
-        "Calle": "",
-        "Colonia": "",
-        "Municipio": "",
-        "Codigo Postal": "",
-        "CURP": "",
-        "Fecha de Nacimiento": "",
-        "Sexo": ""
-      };
+      // Determinar el tipo de INE
+      bool isTypeB = fullText.contains('LOCALIDAD') && fullText.contains('EMISIÓN');
 
-      final lines = fullText.split('\n');
-      for (var i = 0; i < lines.length; i++) {
-        print('Procesando línea: ${lines[i]}');
-        if (lines[i].trim() == 'NOMBRE') {
-          // El nombre está en las siguientes tres líneas
-          if (i + 3 < lines.length) {
-            datos["Apellido Paterno"] = lines[i + 1].trim();
-            datos["Apellido Materno"] = lines[i + 2].trim();
-            datos["Nombre"] = lines[i + 3].trim();
-          }
-        } else if (lines[i].startsWith('DOMICILIO')) {
-          // La calle está en la siguiente línea después de 'DOMICILIO'
-          if (i + 1 < lines.length) {
-            datos["Calle"] = lines[i + 1].trim();
-          }
-          // Buscamos la línea que contiene la colonia y el código postal
-          if (i + 2 < lines.length && lines[i + 2].startsWith('COL')) {
-            var coloniaCP = lines[i + 2].trim();
-            var partes = coloniaCP.split(' ');
-            datos["Colonia"] = partes.sublist(1, partes.length - 1).join(' ').replaceAll('COL ', '');
-            datos["Codigo Postal"] = partes.last;
-          }
-          // Buscamos la línea que contiene el municipio
-          if (i + 3 < lines.length && lines[i + 3].contains(',')) {
-            var municipioEstado = lines[i + 3].split(',');
-            datos["Municipio"] = municipioEstado[0].trim();
-          }
-        } else if (lines[i].startsWith('CURP')) {
-          if (i + 1 < lines.length) {
-            datos["CURP"] = lines[i + 1].trim();
-          }
-        } else if (lines[i].startsWith('FECHA DE NACIMIENTO')) {
-          if (i + 1 < lines.length) {
-            datos["Fecha de Nacimiento"] = lines[i + 1].trim();
-          }
-        } else if (lines[i].startsWith('SEXO')) {
-          datos["Sexo"] = lines[i].split(' ').last.trim();
-        }
+      Map<String, String> datos;
+      if (isTypeB) {
+        datos = extractDataTypeB(fullText);
+      } else {
+        datos = extractDataTypeA(fullText);
       }
 
       print('Datos extraídos de la imagen:');
@@ -105,5 +62,124 @@ class GoogleVisionService {
       print('Error en extractDataFromImage: $e');
       return {"Error": e.toString()};
     }
+  }
+
+  static Map<String, String> extractDataTypeA(String fullText) {
+    final datos = {
+      "Apellido Paterno": "",
+      "Apellido Materno": "",
+      "Nombre": "",
+      "Calle": "",
+      "Colonia": "",
+      "Municipio": "",
+      "Codigo Postal": "",
+      "CURP": "",
+      "Fecha de Nacimiento": "",
+      "Sexo": ""
+    };
+
+    final lines = fullText.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trim() == 'NOMBRE') {
+        if (i + 3 < lines.length) {
+          datos["Apellido Paterno"] = lines[i + 1].trim();
+          datos["Apellido Materno"] = lines[i + 2].trim();
+          datos["Nombre"] = lines[i + 3].trim();
+        }
+      } else if (lines[i].startsWith('DOMICILIO')) {
+        if (i + 1 < lines.length) {
+          datos["Calle"] = lines[i + 1].trim();
+        }
+        if (i + 2 < lines.length && lines[i + 2].startsWith('COL')) {
+          var coloniaCP = lines[i + 2].trim();
+          var partes = coloniaCP.split(' ');
+          datos["Colonia"] = partes.sublist(1, partes.length - 1).join(' ').replaceAll('COL ', '');
+          datos["Codigo Postal"] = partes.last;
+        }
+        if (i + 3 < lines.length && lines[i + 3].contains(',')) {
+          var municipioEstado = lines[i + 3].split(',');
+          datos["Municipio"] = municipioEstado[0].trim();
+        }
+      } else if (lines[i].startsWith('CURP')) {
+        datos["CURP"] = lines[i].contains(' ') ? lines[i].split(' ').last.trim() : (i + 1 < lines.length ? lines[i + 1].trim() : "");
+      } else if (lines[i].startsWith('FECHA DE NACIMIENTO')) {
+        if (i + 1 < lines.length) {
+          datos["Fecha de Nacimiento"] = lines[i + 1].trim();
+        }
+      } else if (lines[i].startsWith('SEXO')) {
+        datos["Sexo"] = lines[i].split(' ').last.trim();
+      }
+    }
+
+    return datos;
+  }
+
+  static Map<String, String> extractDataTypeB(String fullText) {
+    final datos = {
+      "Apellido Paterno": "",
+      "Apellido Materno": "",
+      "Nombre": "",
+      "Domicilio": "",
+      "Colonia": "",
+      "Codigo Postal": "",
+      "Municipio": "",
+      "Estado": "",
+      "CURP": "",
+      "Clave de elector": "",
+      "Fecha de Nacimiento": "",
+      "Sexo": "",
+      "Año de Registro": "",
+      "Sección": "",
+      "Vigencia": "",
+    };
+
+    final lines = fullText.split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trim() == 'NOMBRE') {
+        if (i + 2 < lines.length) {
+          datos["Apellido Paterno"] = lines[i + 1].trim();
+          var nombreCompleto = lines[i + 2].trim().split(' ');
+          if (nombreCompleto.length > 1) {
+            datos["Apellido Materno"] = nombreCompleto[0];
+            datos["Nombre"] = nombreCompleto.sublist(1).join(' ');
+          }
+        }
+      } else if (lines[i].startsWith('DOMICILIO')) {
+        var domicilio = "";
+        var j = i + 1;
+        while (j < lines.length && !lines[j].startsWith('CLAVE DE ELECTOR')) {
+          domicilio += lines[j] + " ";
+          j++;
+        }
+        datos["Domicilio"] = domicilio.trim();
+      } else if (lines[i].startsWith('CLAVE DE ELECTOR')) {
+        datos["Clave de elector"] = lines[i].split(' ').last.trim();
+      } else if (lines[i].startsWith('CURP')) {
+        datos["CURP"] = lines[i].split(' ').last.trim();
+      } else if (lines[i].contains('FECHA DE NACIMIENTO')) {
+        datos["Fecha de Nacimiento"] = lines[i].split(' ').last.trim();
+      } else if (lines[i].contains('SEXO')) {
+        datos["Sexo"] = lines[i].split(' ').last.trim();
+      } else if (lines[i].contains('AÑO DE REGISTRO')) {
+        datos["Año de Registro"] = lines[i].split(' ').last.trim();
+      } else if (lines[i].contains('SECCIÓN')) {
+        datos["Sección"] = lines[i].split(' ').last.trim();
+      } else if (lines[i].contains('VIGENCIA')) {
+        datos["Vigencia"] = lines[i].split(' ').last.trim();
+      }
+    }
+
+    // Extraer información adicional del domicilio
+    if (datos["Domicilio"]!.isNotEmpty) {
+      var domicilioParts = datos["Domicilio"]!.split(' ');
+      if (domicilioParts.length > 3) {
+        datos["Colonia"] = domicilioParts[domicilioParts.length - 3];
+        datos["Codigo Postal"] = domicilioParts[domicilioParts.length - 2];
+        datos["Municipio"] = domicilioParts.last.replaceAll(',', '');
+        datos["Estado"] = "JAL.";
+      }
+    }
+
+    return datos;
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
+import '../services/app_state.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -22,9 +23,12 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     bool curpValido = await _databaseService.verificarCURP(curp);
+// En login_screen.dart, dentro del método _verificarCURP
     if (curpValido) {
+      await AppState.setLoggedIn(true);
       Navigator.of(context).pushReplacementNamed('/profile');
     } else {
+      await AppState.setLoggedIn(false);
       Navigator.of(context).pushReplacementNamed('/welcome');
     }
   }

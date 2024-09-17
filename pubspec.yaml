@@ -22,7 +22,9 @@ dependencies:
   mysql1: ^0.20.0
   googleapis: ^11.2.0
   googleapis_auth: ^1.4.1
-  image_picker: ^0.8.7+5  # Asegúrate de que esta dependencia esté actualizada
+  image_picker: ^0.8.7+5
+  shared_preferences: ^2.0.15
+  file_picker: ^5.3.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -56,7 +58,6 @@ flutter:
     - assets/guide_image_1.png
     - assets/guide_image_2.png
     - assets/guide_image_3.png
-  #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

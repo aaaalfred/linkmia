@@ -9,7 +9,7 @@ import '../screens/general_info_screen.dart';
 
 class AppRoutes {
   static Map<String, WidgetBuilder> get routes => {
-    '/': (context) => const SplashScreen(),
+    '/splash': (context) => const SplashScreen(),
     '/welcome': (context) => const WelcomeScreen(),
     '/guide': (context) => const GuideScreen(),
     '/take_photo': (context) => const TakePhotoScreen(),

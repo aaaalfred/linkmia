@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'dart:typed_data';
-import '../services/google_vision_service.dart';  // Asegúrate de crear este archivo
+import '../services/google_vision_service.dart';
+import '../services/app_state.dart';
+import './general_info_screen.dart';
 
 class TakePhotoScreen extends StatefulWidget {
   const TakePhotoScreen({Key? key}) : super(key: key);
@@ -13,34 +15,57 @@ class TakePhotoScreen extends StatefulWidget {
 }
 
 class _TakePhotoScreenState extends State<TakePhotoScreen> {
-  File? _image;
-  Map<String, String>? _extractedData;
   bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    // Limpiar datos extraídos anteriormente si es necesario
+    AppState.clearExtractedData();
+  }
 
   Future<void> _takePhoto() async {
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
 
-    final ImagePicker _picker = ImagePicker();
-    final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+    try {
+      final ImagePicker _picker = ImagePicker();
+      final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
 
-    if (photo != null) {
+      if (photo != null) {
+        File _image = File(photo.path);
+        Uint8List imageBytes = await _image.readAsBytes();
+        Map<String, String> extractedData = await GoogleVisionService.extractDataFromImage(imageBytes);
+
+        if (extractedData.containsKey("Error")) {
+          setState(() {
+            _errorMessage = extractedData["Error"];
+            _isLoading = false;
+          });
+        } else {
+          // Guardar los datos extraídos en AppState si es necesario
+          await AppState.saveExtractedData(extractedData);
+
+          // Navegar a GeneralInfoScreen con los datos extraídos
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => GeneralInfoScreen(extractedData: extractedData),
+            ),
+          );
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = "No se seleccionó ninguna imagen";
+        });
+      }
+    } catch (e) {
       setState(() {
-        _image = File(photo.path);
-      });
-
-      // Extraer datos de la imagen
-      Uint8List imageBytes = await _image!.readAsBytes();
-      Map<String, String> extractedData = await GoogleVisionService.extractDataFromImage(imageBytes);
-
-      setState(() {
-        _extractedData = extractedData;
         _isLoading = false;
-      });
-    } else {
-      setState(() {
-        _isLoading = false;
+        _errorMessage = "Error al procesar la imagen: $e";
       });
     }
   }
@@ -88,22 +113,17 @@ class _TakePhotoScreenState extends State<TakePhotoScreen> {
                 ),
               ),
               if (_isLoading)
-                CircularProgressIndicator(color: Colors.white),
-              if (_extractedData != null)
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: _extractedData!.entries.map((e) =>
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0),
-                              child: Text('${e.key}: ${e.value}', style: TextStyle(color: Colors.white)),
-                            )
-                        ).toList(),
-                      ),
-                    ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Text(
+                    _errorMessage!,
+                    style: TextStyle(color: Colors.red[300], fontSize: 16),
+                    textAlign: TextAlign.center,
                   ),
                 ),
             ],
